@@ -1,0 +1,52 @@
+inventory:
+  all:
+    children:
+      k8s_cluster:
+        children:
+          kube_node:
+            hosts:
+              worker01:
+              worker02:
+              worker03:
+          kube_control_plane:
+            hosts:
+              master01:
+              master02:
+          etcd:
+            hosts:
+              master01:
+              master02:        
+      balancers:
+        hosts:
+          balancer01:
+          balancer02:
+  
+params:
+- worker01:
+    name: worker-01
+    cpu: 2
+    memory: 2.0 gib
+- worker02:
+    name: worker-02
+    cpu: 2
+    memory: 2.0 gib
+- worker03:
+    name: worker-03
+    cpu: 2
+    memory: 2.0 gib
+- master01:
+    name: master-01
+    cpu: 1
+    memory: 1.0 gib
+- master02:
+    name: master-02
+    cpu: 1
+    memory: 1.0 gib
+- balancer01:
+    name: balancer-01
+    cpu: 1
+    memory: 512 mib
+- balancer02:
+    name: balancer-02
+    cpu: 1
+    memory: 512 mib
