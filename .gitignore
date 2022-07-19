@@ -3,4 +3,4 @@
 terraform.tfstate
 terraform.tfstate.backup
 virtualbox.box
-key
+ansible_inventory.yml
