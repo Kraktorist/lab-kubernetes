@@ -1,0 +1,38 @@
+"all":
+  "children":
+    "balancers":
+      "hosts":
+        "balancer01":
+          "ansible_host": "192.168.0.200"
+        "balancer02":
+          "ansible_host": "192.168.0.34"
+    "k8s_cluster":
+      "children":
+        "etcd":
+          "hosts":
+            "master04":
+              "ansible_host": "192.168.0.159"
+            "master05":
+              "ansible_host": "192.168.0.128"
+            "master06":
+              "ansible_host": "192.168.0.180"
+        "kube_control_plane":
+          "hosts":
+            "master04":
+              "ansible_host": "192.168.0.159"
+            "master05":
+              "ansible_host": "192.168.0.128"
+            "master06":
+              "ansible_host": "192.168.0.180"
+        "kube_node":
+          "hosts":
+            "master04":
+              "ansible_host": "192.168.0.159"
+            "master05":
+              "ansible_host": "192.168.0.128"
+            "master06":
+              "ansible_host": "192.168.0.180"
+  "hosts": {}
+  "vars":
+    "ansible_ssh_private_key_file": "/home/kraktorist/repos/lab-kubernetes/infrastructure/vbox/key"
+    "ansible_user": "vagrant"

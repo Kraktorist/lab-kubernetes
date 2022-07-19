@@ -1,18 +1,32 @@
 locals {
-  ssh_user = "vagrant"
-  ssh_private_key_file = "key"
-  inventory_path = "hosts.yml"
-  inventory = yamldecode(file("../inventory/hosts.yml"))["all"]
+  ssh_private_key_file = var.ssh_private_key_file != "" ? var.ssh_private_key_file : "${abspath(path.root)}/key"
+  config = yamldecode(file(var.config))
+  inventory = local.config.inventory.all
+  params = local.config.params
   nodes = merge(flatten([
-    for group, members in local.inventory.children: [
-      {for node, params in members.hosts:
-        node => {
-            group = group,
-            name = params.name,
-            cpu = params.cpu
-            memory = params.memory
+    [
+      for group, members in local.inventory.children.k8s_cluster.children: [
+        {
+          for node, params in members.hosts:
+            node => {
+                name = node,
+                cpu = local.params[node].cpu
+                memory = local.params[node].memory
+            }
         }
-      }
+      ]
+    ],
+    [
+      for group, members in local.inventory.children.balancers: [
+        {
+          for node, params in members:
+            node => {
+                name = node,
+                cpu = local.params[node].cpu
+                memory = local.params[node].memory
+            }
+        }
+      ]        
     ]
   ])...)
 
@@ -21,63 +35,64 @@ locals {
 resource "virtualbox_vm" "node" {
   for_each = local.nodes
   name      = each.value.name
-  image     = "https://app.vagrantup.com/ubuntu/boxes/focal64/versions/20220715.0.0/providers/virtualbox.box"
+  image     = var.image
   cpus      = each.value.cpu
   memory    = each.value.memory
-  # user_data = file("${path.module}/user_data")
+
 
   network_adapter {
-    type           = "hostonly"
-    host_interface = "enp5s1"
+    type           = "bridged"
+    host_interface = var.host_interface
   }
-}
-
-resource "local_file" "hosts" {
-    filename = local.inventory_path
-    content     = <<-EOF
-    ---
-    all:
-      hosts: %{ for instance in virtualbox_vm.node }
-        ${instance.name}:
-          ansible_host: ${instance.network_adapter.0.ipv4_address} %{ endfor }
-      vars:
-        ansible_connection_type: paramiko
-        ansible_user: ${local.ssh_user}
-    EOF
 }
 
 locals {
   ansible_inventory = {
     all = {
       vars = {
-        ansible_user = local.ssh_user
+        ansible_user = var.ssh_user
         ansible_ssh_private_key_file = local.ssh_private_key_file
       }
       hosts = {}
-      children = tomap(
-        {
-          for group, members in local.inventory.children:
-            group => {
-              hosts = {
-                for node, params in members.hosts:
-                    node => {
-                    ansible_host = [
-                        for v in virtualbox_vm.node:
-                        v.network_adapter[0].ipv4_address if params.name == v.name
-                    ][0]
-                    # name = params.name,
-                    # cpu = params.cpu
-                    # memory = params.memory                    
+      children = {
+        k8s_cluster = {
+          children = tomap(
+            {
+              for group, members in local.inventory.children.k8s_cluster.children:
+                  group => {
+                    hosts = {
+                        for node, params in members.hosts:
+                            node => {
+                            ansible_host = [
+                                for v in virtualbox_vm.node:
+                                v.network_adapter[0].ipv4_address if node == v.name
+                            ][0]                
+                            }
                     }
-              }
+                  }
             }
+          )
         }
-      )
+        balancers = tomap(
+          {
+            for group, members in local.inventory.children.balancers:
+                group => {
+                      for node, params in members:
+                          node => {
+                          ansible_host = [
+                              for v in virtualbox_vm.node:
+                              v.network_adapter[0].ipv4_address if node == v.name
+                          ][0]           
+                          }
+                }           
+          }
+        )
+      }
     }
   }
 }
 
 resource "local_file" "ansible_inventory" {
-    filename = "ansible_inventory.yml"
+    filename = var.ansible_inventory
     content     = yamlencode(local.ansible_inventory)
 }
