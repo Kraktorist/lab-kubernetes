@@ -1,5 +1,5 @@
 locals {
-  ssh_private_key_file = var.ssh_private_key_file != "" ? var.ssh_private_key_file : "${abspath(path.root)}/key"
+  # ssh_private_key_file = var.ssh_private_key_file != "" ? var.ssh_private_key_file : "${abspath(path.root)}/key"
   config = yamldecode(file(var.config))
   inventory = local.config.inventory.all
   params = local.config.params
@@ -17,7 +17,7 @@ locals {
       ]
     ],
     [
-      for group, members in local.inventory.children.balancers: [
+      for group, members in try(local.inventory.children.balancers, {}): [
         {
           for node, params in members:
             node => {
@@ -37,11 +37,11 @@ resource "virtualbox_vm" "node" {
   name      = each.value.name
   image     = var.image
   cpus      = each.value.cpu
-  memory    = each.value.memory
+  memory    = "${each.value.memory} mib"
 
 
   network_adapter {
-    type           = "bridged"
+    type           = "hostonly"
     host_interface = var.host_interface
   }
 }
@@ -51,7 +51,7 @@ locals {
     all = {
       vars = {
         ansible_user = var.ssh_user
-        ansible_ssh_private_key_file = local.ssh_private_key_file
+        # ansible_ssh_private_key_file = local.ssh_private_key_file
       }
       hosts = {}
       children = {
@@ -75,7 +75,7 @@ locals {
         }
         balancers = tomap(
           {
-            for group, members in local.inventory.children.balancers:
+            for group, members in try(local.inventory.children.balancers, {}):
                 group => {
                       for node, params in members:
                           node => {
