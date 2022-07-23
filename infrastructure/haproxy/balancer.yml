@@ -3,11 +3,17 @@
   hosts: localhost
   gather_facts: no
   tasks:
-  - name: Set fact
+  # tcp port should be removed from these facts
+  - name: Set K8S_NODES fact
     set_fact: 
       K8S_NODES: "{{ K8S_NODES|default([]) + [{ 'name': item, 'address': hostvars[item].ansible_host + ':6443' }]  }}"
     with_items:
       - "{{ groups['kube_control_plane'] | list }}"
+  - name: Set SOCKS_NODES fact
+    set_fact: 
+      SOCKS_NODES: "{{ SOCKS_NODES|default([]) + [{ 'name': item, 'address': hostvars[item].ansible_host + ':30001' }]  }}"
+    with_items:
+      - "{{ groups['kube_node'] | list }}"
 
 - name: Installing nginx balancers
   hosts: balancers
