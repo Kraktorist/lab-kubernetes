@@ -1,0 +1,15 @@
+---
+- name: Getting list of k8s nodes
+  hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: Set fact
+    set_fact: 
+      K8S_NODES: "{{ K8S_NODES|default([]) + [{ 'name': item, 'address': hostvars[item].ansible_host + ':6443' }]  }}"
+    with_items:
+      - "{{ groups['kube_control_plane'] | list }}"
+
+- name: Installing nginx balancers
+  hosts: balancers
+  roles:
+    - role: geerlingguy.haproxy
