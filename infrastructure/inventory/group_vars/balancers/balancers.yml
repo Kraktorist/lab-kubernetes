@@ -15,9 +15,9 @@ haproxy_backends:
     haproxy_backend_mode: 'tcp'
     haproxy_backend_balance_method: 'roundrobin'
     haproxy_backend_httpchk: ''
-    haproxy_backend_servers: "{{ hostvars['localhost'].K8S_NODES  }}"
+    haproxy_backend_servers: "{{ hostvars['localhost'].KUBE_CONTROL_PLANE_NODES | to_json | replace('__PORT__', '6443') | from_json  }}"
   - haproxy_backend_name: 'weave-socks'
     haproxy_backend_mode: 'tcp'
     haproxy_backend_balance_method: 'roundrobin'
     haproxy_backend_httpchk: ''
-    haproxy_backend_servers: "{{ hostvars['localhost'].SOCKS_NODES  }}"
+    haproxy_backend_servers: "{{ hostvars['localhost'].KUBE_NODES | to_json | replace('__PORT__', '30001') | from_json }}"

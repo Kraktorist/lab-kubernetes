@@ -4,14 +4,19 @@
   gather_facts: no
   tasks:
   # tcp port should be removed from these facts
-  - name: Set K8S_NODES fact
+  - name: Set KUBE_CONTROL_PLANE_NODES fact
     set_fact: 
-      K8S_NODES: "{{ K8S_NODES|default([]) + [{ 'name': item, 'address': hostvars[item].ansible_host + ':6443' }]  }}"
+      KUBE_CONTROL_PLANE_NODES: "{{ KUBE_CONTROL_PLANE_NODES|default([]) + [{ 'name': item, 'address': hostvars[item].ansible_host + ':__PORT__' }]  }}"
     with_items:
       - "{{ groups['kube_control_plane'] | list }}"
-  - name: Set SOCKS_NODES fact
+  - name: Set KUBE_NODES fact
     set_fact: 
-      SOCKS_NODES: "{{ SOCKS_NODES|default([]) + [{ 'name': item, 'address': hostvars[item].ansible_host + ':30001' }]  }}"
+      KUBE_NODES: "{{ KUBE_NODES|default([]) + [{ 'name': item, 'address': hostvars[item].ansible_host + ':__PORT__' }]  }}"
+    with_items:
+      - "{{ groups['kube_node'] | list }}"
+  - name: Set ETCD_NODES fact
+    set_fact: 
+      ETCD_NODES: "{{ ETCD_NODES|default([]) + [{ 'name': item, 'address': hostvars[item].ansible_host + ':__PORT__'}]  }}"
     with_items:
       - "{{ groups['kube_node'] | list }}"
 
