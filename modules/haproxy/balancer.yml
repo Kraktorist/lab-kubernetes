@@ -3,7 +3,6 @@
   hosts: localhost
   gather_facts: no
   tasks:
-  # tcp port should be removed from these facts
   - name: Set KUBE_CONTROL_PLANE_NODES fact
     set_fact: 
       KUBE_CONTROL_PLANE_NODES: "{{ KUBE_CONTROL_PLANE_NODES|default([]) + [{ 'name': item, 'address': hostvars[item].ansible_host + ':__PORT__' }]  }}"

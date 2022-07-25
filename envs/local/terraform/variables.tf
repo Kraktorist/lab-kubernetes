@@ -12,7 +12,7 @@ variable ssh_user {
 
 variable config {
   type        = string
-  default     = "../inventory/hosts.yml"
+  default     = "../hosts.yml"
   description = "List of machines to build"
 }
 
@@ -29,7 +29,7 @@ variable image {
 
 variable ansible_inventory {
   type        = string
-  default     = "../inventory/ansible_inventory.yml"
+  default     = "../ansible/ansible_inventory.yml"
   description = "Ansible inventory file which will be outputed"
 }
 

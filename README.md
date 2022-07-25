@@ -24,26 +24,31 @@ Kubernetes deployed with kubespray.
 - docker
 
 1. Inventory  
-Setup inventory file [hosts.yml](infrastructure/inventory/hosts.yml)
+- Choose one of environment directories inside of `envs` folder. Point `$labenv` variable to it  
+  ```bash
+  labenv="local"        # for local virtualbox installation
+  labenv="ya-hosted"    # for yandex cloud installation
+  ```
+- Setup inventory file `./envs/$labenv/hosts.yml`
 Define required host names and their parameters
 
-2. Build the instances  
+1. Build the instances  
   
 ```bash  
-cd virtualbox  
+cd .envs/$labenv/terraform
 terraform init  
 terraform plan  
 ```  
-This will create virtualbox machines defined in the `hosts.yml` and generate `infrastructure/inventory/ansible_inventory.yml` according to `kubespray` requirements
+This will create virtualbox machines defined in the `hosts.yml` and generate `./envs/$labenv/ansible/ansible_inventory.yml` according to `kubespray` specification.
 
-3. Provision Kubernetes cluster  
+1. Provision Kubernetes cluster  
   
 ```bash
 # we use default vagrantbox key from the repository for accessing the machines
 ssh-add <(curl https://raw.githubusercontent.com/hashicorp/vagrant/main/keys/vagrant)
 git clone https://github.com/kubernetes-sigs/kubespray.git
 cd kubespray 
-ansible-playbook -i infrastructure/inventory/ansible_inventory.yml --become kubespray/cluster.yml
+ansible-playbook -i ./envs/$labenv/ansible/ansible_inventory.yml --become kubespray/cluster.yml
 ```
 
 4. Provision haproxy (if required)
@@ -51,12 +56,13 @@ ansible-playbook -i infrastructure/inventory/ansible_inventory.yml --become kube
 ```bash
 # install custom role (actually it's geerlingguy.haproxy) but for the moment
 # the main version doesn't support multiple frontend-packends and we have to use development version
-ansible-galaxy install -r infrastructure/haproxy/requrements.yml
+ansible-galaxy install -r ./modules/haproxy/requrements.yml
 ssh-add <(curl https://raw.githubusercontent.com/hashicorp/vagrant/main/keys/vagrant)
-ansible-playbook -i infrastructure/inventory/ansible_inventory.yml --become infrastructure/haproxy/balancer.yml
+ansible-playbook -i /envs/$labenv/ansible/ansible_inventory.yml --become ./modules/haproxy/balancer.yml
 ```  
   
-_Issue:_ The IP address of haproxy instance is not added to the kubernetes certificate, and kubectl doesn't connect to the cluster with TLS error. To avoid this reconfigure connection with the command
+_Issue:_ The IP address of haproxy instance is not added to the kubernetes certificate, and kubectl doesn't connect to the cluster because of TLS error. 
+_Workaround:_ reconfigure connection with the command
 
 ```bash
 kubectl config set-cluster cluster.local --server=https://<haproxy>:6443/ --insecure-skip-tls-verify=true
@@ -78,10 +84,16 @@ see documentation for the project
 git clone https://github.com/microservices-demo/microservices-demo
 cd microservices-demo
 kubectl apply -f deploy/kubernetes/complete-demo.yaml
+# ingresses for sock-shop.example address
+kubectl apply -f apps/sock-shop
+
+echo "<balancerIP> sock-shop.example">>/etc/hosts
 ```
+After installation the project should be accessible as http://sock-shop.example/
+
 default load test
 ```
-docker run --net=host weaveworksdemos/load-test -h k8s_node:nodeport -r 100 -c 2
+docker run --net=host weaveworksdemos/load-test -h sock-shop.example -r 100 -c 2
 ```
 
 

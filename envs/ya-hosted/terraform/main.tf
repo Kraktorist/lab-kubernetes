@@ -7,7 +7,7 @@ locals {
   params = local.config.params
   nodes = merge(flatten([
     [
-      for group, members in local.inventory.children.k8s_cluster.children: [
+      for group, members in try(local.inventory.children.k8s_cluster.children, {}): [
         {
           for node, params in members.hosts:
             node => {
@@ -15,6 +15,7 @@ locals {
                 cpu = local.params[node].cpu
                 memory = local.params[node].memory
                 disk = local.params[node].disk
+                public_ip = local.params[node].public_ip
             }
         }
       ]
@@ -28,6 +29,7 @@ locals {
                 cpu = local.params[node].cpu
                 memory = local.params[node].memory
                 disk = local.params[node].disk
+                public_ip = local.params[node].public_ip
             }
         }
       ]        
@@ -36,16 +38,16 @@ locals {
 
 }
 
-data "yandex_compute_image" "ubuntu" {
-  family = "ubuntu-2004-lts"
+data "yandex_compute_image" "os" {
+  family = var.os_family
 }
 
 resource "yandex_vpc_network" "network" {
-  name = "lab-kubernetes"
+  name = var.network
 }
 
 resource "yandex_vpc_subnet" "subnet" {
-  v4_cidr_blocks = ["192.168.0.0/16"]
+  v4_cidr_blocks = [var.subnet]
   network_id     = yandex_vpc_network.network.id
 }
 
@@ -59,12 +61,12 @@ resource "yandex_compute_instance" "node" {
 
   network_interface {
     subnet_id = yandex_vpc_subnet.subnet.id
-    nat = true
+    nat = each.value.public_ip
   }
 
   boot_disk {
     initialize_params {
-      image_id = data.yandex_compute_image.ubuntu.id
+      image_id = data.yandex_compute_image.os.id
       size = each.value.disk
     }
   }
@@ -86,7 +88,7 @@ locals {
         k8s_cluster = {
           children = tomap(
             {
-              for group, members in local.inventory.children.k8s_cluster.children:
+              for group, members in try(local.inventory.children.k8s_cluster.children, {}):
                   group => {
                     hosts = {
                         for node, params in members.hosts:

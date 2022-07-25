@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sock-ingress
+  namespace: sock-shop
+spec:
+  rules:
+  - host: "sock-shop.example"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: front-end-internal
+            port:
+              number: 80
