@@ -1,6 +1,6 @@
 .terraform/
 .terraform.lock.hcl
-terraform.tfstate
-terraform.tfstate.backup
+.terraform.lock.info
+terraform.tfstate*
 virtualbox.box
 ansible_inventory.yml
