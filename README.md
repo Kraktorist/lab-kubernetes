@@ -26,8 +26,8 @@ Kubernetes deployed with kubespray.
 1. Inventory  
 - Choose one of environment directories inside of `envs` folder. Point `$labenv` variable to it  
   ```bash
-  labenv="local"        # for local virtualbox installation
-  labenv="ya-hosted"    # for yandex cloud installation
+  labenv="dev"        # for local virtualbox installation
+  labenv="prod1"    # for yandex cloud installation based on EC2 instances
   ```
 - Setup inventory file `./envs/$labenv/hosts.yml`
 Define required host names and their parameters
@@ -38,6 +38,7 @@ Define required host names and their parameters
 cd ./envs/$labenv/terraform
 terraform init  
 terraform plan  
+terraform apply
 ```  
 This will create virtualbox machines defined in the `hosts.yml` and generate `./envs/$labenv/ansible/ansible_inventory.yml` according to `kubespray` specification.
 
@@ -57,8 +58,8 @@ ansible-playbook -i ./envs/$labenv/ansible/ansible_inventory.yml --become /tmp/k
 ```bash
 # install custom role (actually it's geerlingguy.haproxy) but for the moment
 # the main version doesn't support multiple frontend-packends and we have to use development version
-ansible-galaxy install -r ./modules/haproxy/requrements.yml
-ansible-playbook -i ./envs/$labenv/ansible/ansible_inventory.yml --become ./modules/haproxy/balancer.yml
+ansible-galaxy install -r ./modules/ansible/haproxy/requrements.yml
+ansible-playbook -i ./envs/$labenv/ansible/ansible_inventory.yml --become ./modules/ansible/haproxy/balancer.yml
 ```  
   
 _Issue:_ The IP address of haproxy instance is not added to the kubernetes certificate, and kubectl doesn't connect to the cluster because of TLS error. 
