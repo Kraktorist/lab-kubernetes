@@ -18,9 +18,9 @@ locals {
       ]
     ],
     [
-      for group, members in try(local.inventory.children.balancers, {}): [
+      for group, members in try(local.inventory.children, {}): [
         {
-          for node, params in members:
+          for node, params in members.hosts:
             node => {
                 name = node,
                 cpu = local.params[node].cpu
@@ -29,10 +29,9 @@ locals {
                 public_ip = local.params[node].public_ip
             }
         }
-      ]        
+      ] if group != "k8s_cluster"
     ]
   ])...)
-
 }
 
 data "yandex_compute_image" "os" {

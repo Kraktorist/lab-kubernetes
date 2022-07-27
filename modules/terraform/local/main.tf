@@ -17,19 +17,18 @@ locals {
       ]
     ],
     [
-      for group, members in try(local.inventory.children.balancers, {}): [
+      for group, members in try(local.inventory.children, {}): [
         {
-          for node, params in members:
+          for node, params in members.hosts:
             node => {
                 name = node,
                 cpu = local.params[node].cpu
                 memory = local.params[node].memory
             }
         }
-      ]        
+      ] if group != "k8s_cluster"
     ]
   ])...)
-
 }
 
 resource "virtualbox_vm" "node" {

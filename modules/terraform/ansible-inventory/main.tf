@@ -1,4 +1,20 @@
 locals {
+  misc_hosts = tomap(
+    {
+      for group, members in try(var.inventory.children, {}):
+          group => {
+            "hosts" = {
+                for node, params in members.hosts:
+                    node => {
+                    ansible_host = [
+                        for v in var.vm:
+                          try(v.network_adapter[0].ipv4_address, v.network_interface[0].nat_ip_address) if node == v.name
+                    ][0]
+                    }
+            }
+          } if group != "k8s_cluster"    
+    }
+  )
   ansible_inventory = {
     all = {
       vars = {
@@ -6,7 +22,7 @@ locals {
         # ansible_ssh_private_key_file = local.ssh_private_key_file
       }
       hosts = {}
-      children = {
+      children = merge(local.misc_hosts, {
         k8s_cluster = {
           children = tomap(
             {
@@ -26,21 +42,7 @@ locals {
             }
           )
         }
-        balancers = tomap(
-          {
-            for group, members in try(var.inventory.children.balancers, {}):
-                group => {
-                      for node, params in members:
-                          node => {
-                          ansible_host = [
-                              for v in var.vm:
-                              try(v.network_adapter[0].ipv4_address, v.network_interface[0].nat_ip_address) if node == v.name
-                          ][0]           
-                          }
-                }           
-          }
-        )
-      }
+      })
     }
   }
 }
