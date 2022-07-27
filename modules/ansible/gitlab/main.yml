@@ -1,0 +1,28 @@
+---
+- name: Install Gitlab
+  hosts: gitlab
+  tasks:
+    # https://gist.github.com/cjtallman/b526d8c7d8b910ba4fd41eb51cd5405b
+    - name: Installing Gitlab CE
+      ansible.builtin.shell: |
+        DEBIAN_FRONTEND=noninteractive apt-get install -y curl openssh-server ca-certificates postfix
+        curl -sS https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | bash
+        apt-get install -y gitlab-ce
+        gitlab-ctl reconfigure
+    - name: Get Gitlab password
+      register: initial_gitlab_password
+      ansible.builtin.shell: |
+        grep -oP '(?<=Password: ).*' /etc/gitlab/initial_root_password
+
+    - name: Initial Gitlab Password
+      ansible.builtin.debug:
+        msg: |
+          Gitlab uri:      http://{{ hostvars[inventory_hostname].ansible_host }}
+          Gitlab user:     root
+          Gitlab password: {{ initial_gitlab_password.stdout }}
+  #   - name: Installing Gitlab Runner
+  #     ansible.builtin.shell: |
+  #       curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.deb.sh | bash
+  #       apt-get install -y gitlab-ci-multi-runner
+  # roles:
+  #   - geerlingguy.docker

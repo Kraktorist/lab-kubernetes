@@ -26,8 +26,9 @@ Kubernetes deployed with kubespray.
 1. Inventory  
 - Choose one of environment directories inside of `envs` folder. Point `$labenv` variable to it  
   ```bash
-  labenv="dev"        # for local virtualbox installation
+  labenv="dev"      # for local virtualbox installation
   labenv="prod1"    # for yandex cloud installation based on EC2 instances
+  labenv="prod2"    # managed k8s in yandex
   ```
 - Setup inventory file `./envs/$labenv/hosts.yml`
 Define required host names and their parameters
