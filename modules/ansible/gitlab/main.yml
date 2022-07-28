@@ -1,28 +1,133 @@
+# TODO recreate the states with repeating tasks as loops
 ---
 - name: Install Gitlab
   hosts: gitlab
   tasks:
+    - name: install curl
+      ansible.builtin.package:
+        name: curl
+        state: present 
+    - name: install git
+      ansible.builtin.package:
+        name: git
+        state: present 
+    - name: install ca-certificates
+      ansible.builtin.package:
+        name: ca-certificates
+        state: present 
+    - name: install openssh-server
+      ansible.builtin.package:
+        name: openssh-server
+        state: present 
+    - name: install postfix
+      ansible.builtin.package:
+        name: postfix
+        state: present   
+
     # https://gist.github.com/cjtallman/b526d8c7d8b910ba4fd41eb51cd5405b
-    - name: Installing Gitlab CE
+    - name: Adding Gitlab CE repositories
       ansible.builtin.shell: |
-        DEBIAN_FRONTEND=noninteractive apt-get install -y curl openssh-server ca-certificates postfix
         curl -sS https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | bash
-        apt-get install -y gitlab-ce
-        gitlab-ctl reconfigure
+
+    - name: install gitlab-ce
+      ansible.builtin.package:
+        name: gitlab-ce
+        state: present
+      register: packagekey 
+
+    - name: Restart Gitlab CE
+      ansible.builtin.shell: gitlab-ctl reconfigure
+      when: packagekey.changed
+
+    - name: install python3-pip
+      ansible.builtin.package:
+        name: python3-pip
+        state: present
+
+    - name: Install python-gitlab module
+      ansible.builtin.pip:
+        name: python-gitlab
+
     - name: Get Gitlab password
       register: initial_gitlab_password
       ansible.builtin.shell: |
         grep -oP '(?<=Password: ).*' /etc/gitlab/initial_root_password
+
+    - name: "Create GitLab Group"
+      # https://github.com/ansible-collections/community.general/issues/4990#issuecomment-1193366106
+      community.general.gitlab_group:
+        api_url: http://{{ hostvars[inventory_hostname].ansible_host }}
+        validate_certs: False
+        api_username: root
+        api_password: "{{ initial_gitlab_password.stdout }}"
+        name: lab
+        visibility: internal
+        description: ''
+        project_creation_level: maintainer
+        require_two_factor_authentication: no
+        subgroup_creation_level: maintainer
+        validate_certs: no
+        auto_devops_enabled: no
+        state: present
+      register: gitlab_group
+
+    - name: "Create GitLab User"
+      community.general.gitlab_user:
+        api_url: http://{{ hostvars[inventory_hostname].ansible_host }}
+        validate_certs: False
+        api_username: root
+        api_password: "{{ initial_gitlab_password.stdout }}"
+        name: root
+        username: root
+        password: mysecretpassword
+        email: me@example.com
+        state: present
+
+    # - name: Create a GitLab Project lab-kubernetes
+    #   community.general.gitlab_project:
+    #     api_url: http://{{ hostvars[inventory_hostname].ansible_host }}
+    #     api_username: root
+    #     api_password: "{{ initial_gitlab_password.stdout }}"
+    #     name: lab-kubernetes
+    #     visibility: internal
+    #     group: "{{ gitlab_group.group.id }}"
+
+    - name: Clone lab-kubernetes repository
+      ansible.builtin.shell: |
+        repopath=https://github.com/Kraktorist/lab-kubernetes.git
+        reponame="lab-kubernetes"
+        rm -rf $reponame
+        git clone $repopath $reponame
+        cd $reponame
+        git remote add gitlab-origin http://root:mysecretpassword@{{ hostvars[inventory_hostname].ansible_host }}/{{ gitlab_group.group.name }}/${reponame}.git
+        git push --all gitlab-origin
+        git push --tags gitlab-origin
+
+    - name: Clone microservices-demo repository
+      ansible.builtin.shell: |
+        repopath=https://github.com/microservices-demo/microservices-demo.git
+        reponame="microservices-demo"
+        rm -rf $reponame
+        git clone $repopath $reponame
+        cd $reponame
+        git remote add gitlab-origin http://root:mysecretpassword@{{ hostvars[inventory_hostname].ansible_host }}/{{ gitlab_group.group.name }}/${reponame}.git
+        git push --all gitlab-origin
+        git push --tags gitlab-origin
+
+    - name: Clone Google microservices-demo repository
+      ansible.builtin.shell: |
+        repopath=https://github.com/GoogleCloudPlatform/microservices-demo.git
+        reponame="google-microservices-demo"
+        rm -rf $reponame
+        git clone $repopath $reponame
+        cd $reponame
+        git remote add gitlab-origin http://root:mysecretpassword@{{ hostvars[inventory_hostname].ansible_host }}/{{ gitlab_group.group.name }}/${reponame}.git
+        git push --all gitlab-origin
+        git push --tags gitlab-origin
 
     - name: Initial Gitlab Password
       ansible.builtin.debug:
         msg: |
           Gitlab uri:      http://{{ hostvars[inventory_hostname].ansible_host }}
           Gitlab user:     root
-          Gitlab password: {{ initial_gitlab_password.stdout }}
-  #   - name: Installing Gitlab Runner
-  #     ansible.builtin.shell: |
-  #       curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/script.deb.sh | bash
-  #       apt-get install -y gitlab-ci-multi-runner
-  # roles:
-  #   - geerlingguy.docker
+          Gitlab password: mysecretpassword
