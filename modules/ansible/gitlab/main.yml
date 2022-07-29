@@ -122,3 +122,5 @@
           Gitlab uri:      "{{ gitlab_url }}"
           Gitlab user:     "{{ gitlab_user }}"
           Gitlab password: "{{ gitlab_password }}"
+      tags:
+      - output
