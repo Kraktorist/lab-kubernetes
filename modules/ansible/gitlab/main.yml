@@ -96,10 +96,16 @@
         auto_devops_enabled: no
         state: present
       register: gitlab_group
+      tags:
+      - token
+      - never
 
-    # - name: debug
-    #   ansible.builtin.debug:
-    #     var: gitlab_group
+    - name: Save runner token
+      ansible.builtin.set_fact:
+        runner_token: "{{ gitlab_group.group.runners_token }}"
+      tags:
+      - token
+      - never
 
     - name: Configure git client
       ansible.builtin.shell: |
@@ -111,15 +117,15 @@
       loop: "{{ git_repolist }}"
 
 
-    - name: Register runner
-      community.general.gitlab_runner:
-        api_url: "{{ gitlab_url }}"
-        api_username: "{{ gitlab_user }}"
-        api_password: "{{ gitlab_password }}"
-        registration_token: "{{ gitlab_group.group.runners_token }}"
-        description: MyProject runner
-        state: present
-        project: lab/lab-kubernetes
+    # - name: Register runner
+    #   community.general.gitlab_runner:
+    #     api_url: "{{ gitlab_url }}"
+    #     api_username: "{{ gitlab_user }}"
+    #     api_password: "{{ gitlab_password }}"
+    #     registration_token: "{{ gitlab_group.group.runners_token }}"
+    #     description: MyProject runner
+    #     state: present
+    #     project: lab/lab-kubernetes
 
     - name: Initial Gitlab Password
       ansible.builtin.debug:
@@ -129,3 +135,25 @@
           Gitlab password: "{{ gitlab_password }}"
       tags:
       - output
+      - never
+
+- name: Creating Gitlab Runner
+  hosts: gitlab
+  tasks: 
+
+  - name: Creatin kubernetes manifest for Gitlab runner
+    ansible.builtin.template:
+      src: runner-manifest.j2
+      dest: runner-manifest.yml
+    tags:
+      - token
+      - never
+
+  - name: Start Gitlab Runner
+    ansible.builtin.shell: |
+      kubectl create namespace gitlab-runner
+      kubectl -n gitlab-runner apply -f runner-manifest.yml
+      rm -rf runner-manifest.yml
+    tags:
+      - token
+      - never

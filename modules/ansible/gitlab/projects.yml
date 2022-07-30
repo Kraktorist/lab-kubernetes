@@ -24,6 +24,8 @@
     contains: 'kind: Deployment|kind: Job|kind: DaemonSet'
     recurse: true
   register: manifests
+  when:
+  - hostvars[groups["nexus"][0]].ansible_host is defined
 - name: Filter only deployments manifests
   ansible.builtin.replace:
     path: "{{ file.path }}"
@@ -37,6 +39,7 @@
   when:
   - '"helm" not in file.path'
   - project.changed
+  - hostvars[groups["nexus"][0]].ansible_host is defined
 
 - name: Push {{ item.reponame }} repository
   ansible.builtin.shell: |

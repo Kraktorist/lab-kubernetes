@@ -28,8 +28,12 @@ deploy-nexus:
 show-hosts:
 	cd ./envs/${labenv}/terraform && terraform output -json | jq '.nodes_ips.value'
 
-show-gitlab:
+show-gitlab-root:
 	ansible-playbook -i ./envs/${labenv}/ansible/ansible_inventory.yml --become ./modules/ansible/gitlab/main.yml --tags output
+
+deploy-runner:
+	ansible-playbook -i ./envs/${labenv}/ansible/ansible_inventory.yml --become ./modules/ansible/gitlab/main.yml --tags token
+
 
 provision-nexus:
 	set -e; \
@@ -52,3 +56,19 @@ provision-nexus:
 	docker image rm $${image}; \
 	docker image rm $${docker_host}/$${image}; \
 	done 
+
+copy-kubeconfig:
+	set -e; \
+	master_host=$$(python -c \
+	  "import yaml; \
+	   x=yaml.safe_load(open('./envs/${labenv}/ansible/ansible_inventory.yml')); \
+	   k8s=x['all']['children']['k8s_cluster']['children']['kube_control_plane']['hosts']; \
+	   print(k8s[list(k8s.keys())[0]]['ansible_host'])"); \
+	ssh_user=$$(python -c \
+	  "import yaml; \
+	   x=yaml.safe_load(open('./envs/${labenv}/ansible/ansible_inventory.yml')); \
+	   print(x['all']['vars']['ansible_user'])"); \
+	ssh $${ssh_user}@$${master_host} sudo cat /root/.kube/config>~/.kube/config; \
+	kubectl config set-cluster cluster.local \
+	    --server=https://$${master_host}:6443/ \
+		--insecure-skip-tls-verify=true
