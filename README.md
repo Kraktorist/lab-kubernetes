@@ -20,7 +20,6 @@ Kubernetes deployed with kubespray.
 - terraform
 - git
 - ansible
-- ansible roles for haproxy
 - docker
 
 1. Inventory  
