@@ -101,6 +101,11 @@
     #   ansible.builtin.debug:
     #     var: gitlab_group
 
+    - name: Configure git client
+      ansible.builtin.shell: |
+        git config --global user.email "admin@example.com"
+        git config --global user.name "root"
+
     - name: Creating projects
       include_tasks: projects.yml
       loop: "{{ git_repolist }}"
