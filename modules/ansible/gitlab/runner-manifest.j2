@@ -25,7 +25,7 @@ metadata:
     heritage: "Helm"
 type: Opaque
 data:
-  runner-registration-token: {{ runner_token }}
+  runner-registration-token: {{ hostvars[groups['gitlab'][0]]['runner_token'] | b64encode }}
   runner-token: ""
 ---
 # Source: gitlab-runner/templates/configmap.yaml
@@ -149,7 +149,7 @@ data:
 ---
 # Source: gitlab-runner/templates/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
-kind: "Role"
+kind: ClusterRole
 metadata:
   name: gitlab-runner
   labels:
@@ -159,6 +159,52 @@ metadata:
     heritage: "Helm"
   namespace: "gitlab-runner"
 rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["list","get","watch","create","delete"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["list","get","watch","create","delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["list","get","watch","create","delete"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list","get","watch","create","delete"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["pods/attach"]
+  verbs: ["list","get","create","delete","update"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["list","get","create","delete","update"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["list","get","create","delete","update"]
+---
+# Source: gitlab-runner/templates/role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gitlab-runner
+  labels:
+    app: gitlab-runner
+    chart: gitlab-runner-0.43.1
+    release: "gitlab-runner"
+    heritage: "Helm"
+  namespace: "gitlab-runner"
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["list","get","watch","create","delete"]
+- apiGroups: [""]
+  resources: ["deployments"]
+  verbs: ["list","get","watch","create","delete"]
 - apiGroups: [""]
   resources: ["pods"]
   verbs: ["list","get","watch","create","delete"]
@@ -179,6 +225,45 @@ rules:
   verbs: ["list","get","create","delete","update"]
 ---
 # Source: gitlab-runner/templates/role-binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: "ClusterRoleBinding"
+metadata:
+  name: gitlab-runner
+  labels:
+    app: gitlab-runner
+    chart: gitlab-runner-0.43.1
+    release: "gitlab-runner"
+    heritage: "Helm"
+  namespace: "gitlab-runner"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gitlab-runner
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: "gitlab-runner"
+---
+# Source: gitlab-runner/templates/role-binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: "ClusterRoleBinding"
+metadata:
+  name: gitlab-runner2
+  labels:
+    app: gitlab-runner
+    chart: gitlab-runner-0.43.1
+    release: "gitlab-runner"
+    heritage: "Helm"
+  namespace: "gitlab-runner"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gitlab-runner
+subjects:
+- kind: ServiceAccount
+  name: gitlab-runner
+  namespace: "gitlab-runner"
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: "RoleBinding"
 metadata:
@@ -255,7 +340,7 @@ spec:
         env:
                 
         - name: CI_SERVER_URL
-          value: {{ gitlab_url }}
+          value: {{ hostvars[groups['gitlab'][0]]['gitlab_url'] }}
         - name: CLONE_URL
           value: ""
         - name: RUNNER_EXECUTOR

@@ -1,3 +1,6 @@
+ifndef VERBOSE
+MAKEFLAGS += --silent
+endif
 SHELL := /bin/bash
 install-all: install-hosts deploy-k8s deploy-haproxy deploy-gitlab deploy-nexus tf-output
 
@@ -32,7 +35,7 @@ show-gitlab-root:
 	ansible-playbook -i ./envs/${labenv}/ansible/ansible_inventory.yml --become ./modules/ansible/gitlab/main.yml --tags output
 
 deploy-runner:
-	ansible-playbook -i ./envs/${labenv}/ansible/ansible_inventory.yml --become ./modules/ansible/gitlab/main.yml --tags token
+	ansible-playbook -i ./envs/${labenv}/ansible/ansible_inventory.yml ./modules/ansible/gitlab/main.yml --tags token
 
 
 provision-nexus:

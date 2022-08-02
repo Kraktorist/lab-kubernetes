@@ -26,6 +26,10 @@
   register: manifests
   when:
   - hostvars[groups["nexus"][0]].ansible_host is defined
+  tags:
+  - never
+  - nexus_repo
+
 - name: Filter only deployments manifests
   ansible.builtin.replace:
     path: "{{ file.path }}"
@@ -40,7 +44,10 @@
   - '"helm" not in file.path'
   - project.changed
   - hostvars[groups["nexus"][0]].ansible_host is defined
-
+  tags:
+  - never
+  - nexus_repo
+  
 - name: Push {{ item.reponame }} repository
   ansible.builtin.shell: |
     repopath={{ item.repopath }}
