@@ -4,7 +4,7 @@ output nodes_private_ips {
   description = "Nodes private IP addresses"
 }
 
-output nodes_public_ips {
+output nodes_ips {
   value       = module.ya-hosted.worker_public_ips
   sensitive   = false
   description = "Nodes public IP addresses"
