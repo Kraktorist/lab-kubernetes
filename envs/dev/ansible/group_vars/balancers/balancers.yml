@@ -20,4 +20,4 @@ haproxy_backends:
     haproxy_backend_mode: 'tcp'
     haproxy_backend_balance_method: 'roundrobin'
     haproxy_backend_httpchk: ''
-    haproxy_backend_servers: "{{ hostvars['localhost'].KUBE_NODES | to_json | replace('__PORT__', '80') | from_json }}"
+    haproxy_backend_servers: "{{ hostvars['localhost'].KUBE_NODES | to_json | replace('__PORT__', '30001') | from_json }}"
