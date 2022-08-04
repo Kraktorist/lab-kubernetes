@@ -1,9 +1,11 @@
-output name {
-  value       = yandex_kubernetes_cluster.k8s
+output nodes_ips {
+  value       = module.ya-managed.worker_public_ips
   sensitive   = false
-  description = "description"
+  description = "Nodes public IP addresses"
 }
 
-output "worker_public_ips" {
-  value = {for k, v in yandex_kubernetes_cluster.k8s.master: v.internal_v4_address => v.external_v4_address}
+output registry_address {
+  value       = format("cr.yandex/%s",module.ya-managed.registry_id)
+  sensitive   = false
+  description = "Registry URL"
 }

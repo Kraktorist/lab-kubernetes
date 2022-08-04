@@ -1,3 +1,10 @@
+variable service_account {
+  type        = string
+  default     = "lab-tf"
+  description = "Cluster Service Account (must be precreated)"
+}
+
+
 variable network {
   type        = string
   default     = "lab-kubernetes"
@@ -40,6 +47,23 @@ variable container_runtime {
   description = "Kubernetes Container Runtime"
 }
 
+variable node_cpu_cores {
+  type        = string
+  default     = 2
+  description = "CPU Cores"
+}
+
+variable node_memory {
+  type        = string
+  default     = 4
+  description = "Node Memory"
+}
+
+variable node_disk {
+  type        = string
+  default     = 64
+  description = "Node Disk"
+}
 
 
 
