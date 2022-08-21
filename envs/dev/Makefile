@@ -2,47 +2,50 @@ ifndef VERBOSE
 MAKEFLAGS += --silent
 endif
 SHELL := /bin/bash
-install-all: install-hosts deploy-k8s deploy-haproxy deploy-gitlab deploy-nexus tf-output
 
 install-hosts:
-	cd ./envs/${labenv}/terraform && terraform init && terraform apply
+	cd ./terraform && terraform apply
 
 destroy:
-	cd ./envs/${labenv}/terraform && terraform destroy
+	cd ./terraform && terraform destroy
 
 deploy-k8s:
 	tmp=$$(mktemp -d); \
 	echo $${tmp}; \
 	git clone https://github.com/kubernetes-sigs/kubespray.git $${tmp}; \
-	ansible-playbook -i ./envs/${labenv}/ansible/ansible_inventory.yml --become $${tmp}/cluster.yml; \
+	ansible-playbook -i ./ansible/ansible_inventory.yml --become $${tmp}/cluster.yml; \
 	rm -rf $${tmp}
 
 deploy-haproxy:
 	ansible-galaxy install -r ./modules/ansible/haproxy/requirements.yml;
-	ansible-playbook -i ./envs/${labenv}/ansible/ansible_inventory.yml --become ./modules/ansible/haproxy/main.yml
+	ansible-playbook -i ./ansible/ansible_inventory.yml --become ../../modules/ansible/haproxy/main.yml
 
 deploy-gitlab:
-	ansible-playbook -i ./envs/${labenv}/ansible/ansible_inventory.yml --become ./modules/ansible/gitlab/main.yml
+	ansible-playbook -i ./ansible/ansible_inventory.yml --become ../../modules/ansible/gitlab/main.yml
 
 deploy-nexus:
-	ansible-galaxy install -r ./modules/ansible/nexus/requirements.yml;
-	ansible-playbook -i ./envs/${labenv}/ansible/ansible_inventory.yml --become modules/ansible/nexus/main.yml 
+	ansible-galaxy install -r ../../modules/ansible/nexus/requirements.yml;
+	ansible-playbook -i ./ansible/ansible_inventory.yml --become ../../modules/ansible/nexus/main.yml 
 
 show-hosts:
-	cd ./envs/${labenv}/terraform && terraform output -json | jq '.nodes_ips.value'
+	cd ./terraform && terraform output -json | jq '.nodes_ips.value'
 
 show-gitlab-root:
-	ansible-playbook -i ./envs/${labenv}/ansible/ansible_inventory.yml --become ./modules/ansible/gitlab/main.yml --tags output
+	ansible-playbook -i ./ansible/ansible_inventory.yml --become ../../modules/ansible/gitlab/main.yml --tags output
 
 deploy-runner:
-	ansible-playbook -i ./envs/${labenv}/ansible/ansible_inventory.yml ./modules/ansible/gitlab/main.yml --tags token
+	ansible-playbook -i ./ansible/ansible_inventory.yml ../../modules/ansible/gitlab/main.yml --tags token
+
+create-gitlab-projects:
+	ansible-playbook -i ./ansible/ansible_inventory.yml --become ../../modules/ansible/gitlab/main.yml --tags projects
 
 
-provision-nexus:
+
+download-weavesocks-images:
 	set -e; \
 	docker_host=$$(python -c \
 	  "import yaml; \
-	   x=yaml.safe_load(open('./envs/${labenv}/ansible/ansible_inventory.yml')); \
+	   x=yaml.safe_load(open('./ansible/ansible_inventory.yml')); \
 	   nexus=x['all']['children']['nexus']['hosts']; \
 	   print(nexus[list(nexus.keys())[0]]['ansible_host'])"):9080; \
 	read -p "Enter docker user: " username; \
@@ -64,12 +67,12 @@ copy-kubeconfig:
 	set -e; \
 	master_host=$$(python -c \
 	  "import yaml; \
-	   x=yaml.safe_load(open('./envs/${labenv}/ansible/ansible_inventory.yml')); \
+	   x=yaml.safe_load(open('./ansible/ansible_inventory.yml')); \
 	   k8s=x['all']['children']['k8s_cluster']['children']['kube_control_plane']['hosts']; \
 	   print(k8s[list(k8s.keys())[0]]['ansible_host'])"); \
 	ssh_user=$$(python -c \
 	  "import yaml; \
-	   x=yaml.safe_load(open('./envs/${labenv}/ansible/ansible_inventory.yml')); \
+	   x=yaml.safe_load(open('./ansible/ansible_inventory.yml')); \
 	   print(x['all']['vars']['ansible_user'])"); \
 	ssh $${ssh_user}@$${master_host} sudo cat /root/.kube/config>~/.kube/config; \
 	kubectl config set-cluster cluster.local \

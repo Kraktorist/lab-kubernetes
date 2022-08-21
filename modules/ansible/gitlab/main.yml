@@ -45,7 +45,7 @@
       ansible.builtin.shell: |
         grep -oP '(?<=Password: ).*' /etc/gitlab/initial_root_password
 
-    - name: "Create GitLab User"
+    - name: Create GitLab User
       community.general.gitlab_user:
         api_url: "{{ gitlab_url }}"
         validate_certs: False
@@ -58,14 +58,14 @@
         state: present
       ignore_errors: yes # assuming that the user has been updated already
 
-    - name: "Create GitLab Group"
+    - name: "Create GitLab Group {{ lab_group }}"
       # https://github.com/ansible-collections/community.general/issues/4990#issuecomment-1193366106
       community.general.gitlab_group:
         api_url: "{{ gitlab_url }}"
         validate_certs: False
         api_username: "{{ gitlab_user }}"
         api_password: "{{ gitlab_password }}"
-        name: lab
+        name: "{{ lab_group }}"
         visibility: internal
         description: ''
         project_creation_level: maintainer
@@ -74,6 +74,26 @@
         auto_devops_enabled: no
         state: present
       register: gitlab_group
+      tags:
+      - projects
+
+    - name: Set CI/CD variables
+      community.general.gitlab_group_variable:
+        api_url: "{{ gitlab_url }}"
+        validate_certs: False
+        api_username: "{{ gitlab_user }}"
+        api_password: "{{ gitlab_password }}"
+        group: "{{ lab_group }}"
+        purge: true
+        variables:
+          - name: NEXUS_REGISTRY
+            value: "{{ hostvars[groups['nexus'][0]].ansible_host }}:9080"
+          - name: NEXUS_USER
+            value: admin
+          - name: NEXUS_PASSWORD
+            value: "{{ hostvars[groups['nexus'][0]].nexus_admin_password }}"
+      tags:
+      - projects
 
     - name: Waiting for Gitlab runners_token generating
       ansible.builtin.pause:
@@ -87,7 +107,7 @@
         validate_certs: False
         api_username: "{{ gitlab_user }}"
         api_password: "{{ gitlab_password }}"
-        name: lab
+        name: "{{ lab_group }}"
         visibility: internal
         description: ''
         project_creation_level: maintainer
@@ -116,6 +136,9 @@
     - name: Creating projects
       include_tasks: projects.yml
       loop: "{{ git_repolist }}"
+      tags:
+      - never
+      - projects
 
 
     # - name: Register runner
@@ -160,3 +183,4 @@
       tags:
         - token
         - never
+

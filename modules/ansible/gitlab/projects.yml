@@ -1,5 +1,5 @@
 ---
-- name: Create a GitLab Project {{ item.reponame }}
+- name: Create GitLab Project {{ item.reponame }}
   community.general.gitlab_project:
     api_url: "{{ gitlab_url }}"
     api_username: "{{ gitlab_user }}"
@@ -8,6 +8,9 @@
     visibility: internal
     group: "{{ gitlab_group.group.id }}"
   register: project
+  tags:
+  - never
+  - projects
 
 - name: Prepare {{ item.reponame }} repository
   ansible.builtin.shell: |
@@ -16,6 +19,9 @@
     rm -rf $reponame
     git clone $repopath $reponame
   when: project.changed
+  tags:
+  - never
+  - projects
 
 - name: Find all kubernetes manifest
   ansible.builtin.find:
@@ -29,6 +35,7 @@
   tags:
   - never
   - nexus_repo
+  - projects
 
 - name: Filter only deployments manifests
   ansible.builtin.replace:
@@ -47,6 +54,7 @@
   tags:
   - never
   - nexus_repo
+  - projects
   
 - name: Push {{ item.reponame }} repository
   ansible.builtin.shell: |
@@ -60,3 +68,6 @@
     git push --tags gitlab-origin
     cd .. && rm -rf $reponame
   when: project.changed
+  tags:
+  - never
+  - projects
