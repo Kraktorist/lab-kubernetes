@@ -1,10 +1,29 @@
 gitlab_user: root
-gitlab_password: mysecretpassword
+gitlab_password: "{{ GITLAB_PASSWORD }}"
 gitlab_email: admin@example.com
 gitlab_host: "{{ hostvars[inventory_hostname].ansible_host }}"
 gitlab_url: http://{{ gitlab_host }}
+NEXUS_REGISTRY: "{{ hostvars[groups['nexus'][0]]['ansible_host'] }}:9080"
 lab_group: lab
+lab_gitlab_vars:
+  - name: DOCKER_AUTH_CONFIG
+    value: " {\"auths\": { \"{{ NEXUS_REGISTRY }}\": { \"auth\": \"{{ ('admin:' + NEXUS_ADMIN_PASSWORD) | b64encode }}\" }}}"
+  - name: NEXUS_REGISTRY
+    value: "{{ NEXUS_REGISTRY }}"
+  - name: SSH_PRIVATE_KEY
+    value: "{{ SSH_PRIVATE_KEY }}"
+  - name: SSH_PUBLIC_KEY
+    value: "{{ SSH_PUBLIC_KEY }}"
+  - name: ANSIBLE_VAULT_PASSWORD
+    value: "{{ ANSIBLE_VAULT_PASSWORD }}"
 git_repolist:
   - { reponame: lab-kubernetes, repopath: https://github.com/Kraktorist/lab-kubernetes.git }
-  - { reponame: boutique, repopath: https://github.com/GoogleCloudPlatform/microservices-demo.git }
   - { reponame: weavesocks, repopath: https://github.com/microservices-demo/microservices-demo.git }
+  - { reponame: carts, repopath: https://github.com/microservices-demo/carts.git }
+  - { reponame: front-end, repopath: https://github.com/microservices-demo/front-end.git }
+  - { reponame: user, repopath: https://github.com/microservices-demo/user.git }
+  - { reponame: shipping, repopath: https://github.com/microservices-demo/shipping.git }
+  - { reponame: queue-master, repopath: https://github.com/microservices-demo/queue-master.git }
+  - { reponame: orders, repopath: https://github.com/microservices-demo/orders.git }
+  - { reponame: catalogue, repopath: https://github.com/microservices-demo/catalogue.git }
+  - { reponame: payment, repopath: https://github.com/microservices-demo/payment.git }

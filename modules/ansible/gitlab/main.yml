@@ -31,7 +31,7 @@
         regexp: ^external_url 'http://gitlab.example.com'
         line: external_url '{{ gitlab_url }}'
       register: external_url
-      
+
     - name: Install Gitlab CE | Memory Tuning
       ansible.builtin.lineinfile:
         path: /etc/gitlab/gitlab.rb
@@ -104,13 +104,7 @@
         api_password: "{{ gitlab_password }}"
         group: "{{ lab_group }}"
         purge: true
-        variables:
-          - name: NEXUS_REGISTRY
-            value: "{{ hostvars[groups['nexus'][0]].ansible_host }}:9080"
-          - name: NEXUS_USER
-            value: admin
-          - name: NEXUS_PASSWORD
-            value: "{{ hostvars[groups['nexus'][0]].nexus_admin_password }}"
+        variables: "{{ lab_gitlab_vars }}"
       tags:
       - projects
 
@@ -186,20 +180,43 @@
   become: false
   tasks: 
 
-    - name: Creating kubernetes manifest for Gitlab runner
-      ansible.builtin.template:
-        src: runner-manifest.j2
-        dest: runner-manifest.yml
+    # - name: Creating kubernetes manifest for Gitlab runner
+    #   ansible.builtin.template:
+    #     src: runner-manifest.j2
+    #     dest: runner-manifest.yml
+    #   tags:
+    #     - token
+    #     - never
+
+    # - name: Start Gitlab Runner
+    #   ansible.builtin.shell: |
+    #     kubectl create namespace gitlab-runner
+    #     kubectl -n gitlab-runner apply -f runner-manifest.yml
+    #     rm -rf runner-manifest.yml
+    #   tags:
+    #     - token
+    #     - never
+
+
+    - name: Add stable chart repo
+      kubernetes.core.helm_repository:
+        name: gitlab
+        repo_url: https://charts.gitlab.io
       tags:
         - token
         - never
 
-    - name: Start Gitlab Runner
-      ansible.builtin.shell: |
-        kubectl create namespace gitlab-runner
-        kubectl -n gitlab-runner apply -f runner-manifest.yml
-        rm -rf runner-manifest.yml
+    - name: Install kubernetes gitlab-runner
+      kubernetes.core.helm:
+        name: gitlab-runner
+        chart_ref: gitlab/gitlab-runner
+        release_namespace: gitlab-runner
+        values_files: runner_values.yml
+        values:
+          runnerRegistrationToken: "{{ hostvars[groups['gitlab'][0]]['runner_token'] }}"
+          gitlabUrl: "{{ hostvars[groups['gitlab'][0]]['gitlab_url'] }}"
+          runners:
+            tags: "dev,k8s"
       tags:
         - token
         - never
-
